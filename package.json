@@ -1,0 +1,13 @@
+{
+  "name": "dual-shorts-player",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Player de Shorts Duplo com backend seguro.",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
