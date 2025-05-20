@@ -134,7 +134,7 @@
         let globalSyncOffset = 0.0;
         let isPlaying = false;
         let playersReady = { p1: false, p2: false };
-        let playersEnded = { p1: false, p2: false }; // Alterado para p1, p2 minúsculo
+        let playersEnded = { p1: false, p2: false };
         let isLoadingPlaylist = false;
 
         const speedRange = document.getElementById('speedRange');
@@ -202,8 +202,6 @@
             });
         }
 
-        // --- API IFrame do YouTube ---
-        // Esta função é chamada automaticamente pela API do YouTube após o script ser carregado.
         function onYouTubeIframeAPIReady() {
             console.log("[FRONTEND] YouTube API Pronta (onYouTubeIframeAPIReady). Criando players...");
             if (!player1Container || !player2Container) {
@@ -214,16 +212,16 @@
             const playerWidth = player1Container.offsetWidth;
             const playerHeight = player1Container.offsetHeight;
 
-            // Obtém a origem da janela atual para o parâmetro 'origin'
-            const currentOrigin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port: '');
-            console.log("[FRONTEND] Origem para playerVars:", currentOrigin);
+            // MODIFICADO: Usar window.location.origin que é mais robusto
+            const pageOrigin = window.location.origin; 
+            console.log("[FRONTEND] Origem para playerVars:", pageOrigin);
 
             try {
                 player1 = new YT.Player('player1', {
                     height: playerHeight, width: playerWidth,
                     playerVars: { 
                         'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
-                        'origin': currentOrigin // ADICIONADO: Especifica a origem
+                        'origin': pageOrigin 
                     },
                     events: { 'onReady': onPlayer1Ready, 'onStateChange': onPlayer1StateChange, 'onError': (e) => onPlayerError('Player 1', e) }
                 });
@@ -231,11 +229,11 @@
                     height: playerHeight, width: playerWidth,
                     playerVars: { 
                         'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
-                        'origin': currentOrigin // ADICIONADO: Especifica a origem
+                        'origin': pageOrigin
                     },
                     events: { 'onReady': onPlayer2Ready, 'onStateChange': onPlayer2StateChange, 'onError': (e) => onPlayerError('Player 2', e) }
                 });
-                console.log("[FRONTEND] Instâncias YT.Player solicitadas com 'origin' configurado.");
+                console.log("[FRONTEND] Instâncias YT.Player solicitadas com 'origin' configurado para:", pageOrigin);
             } catch (error) {
                 console.error("[FRONTEND] Erro EXCEPCIONAL ao tentar criar instâncias YT.Player:", error);
                 showMessage("Erro crítico ao inicializar a API do YouTube. Verifique o console para detalhes técnicos.");
@@ -270,14 +268,14 @@
             }
         }
 
-        function onPlayer1StateChange(event) { handlePlayerStateChange(event, 'P1'); } // Removido playerInstance daqui
-        function onPlayer2StateChange(event) { handlePlayerStateChange(event, 'P2'); } // Removido playerInstance daqui
+        function onPlayer1StateChange(event) { handlePlayerStateChange(event, 'P1'); }
+        function onPlayer2StateChange(event) { handlePlayerStateChange(event, 'P2'); }
 
-        function handlePlayerStateChange(event, playerKey) { // Removido playerInstance daqui
+        function handlePlayerStateChange(event, playerKey) {
             let stateName = Object.keys(YT.PlayerState).find(key => YT.PlayerState[key] === event.data) || 'DESCONHECIDO';
             console.log(`[FRONTEND] ${playerKey} State Change: ${event.data} (${stateName})`);
             
-            const playerEndedKey = playerKey.toLowerCase(); // 'p1' ou 'p2'
+            const playerEndedKey = playerKey.toLowerCase();
 
             if (event.data === YT.PlayerState.PLAYING) {
                 isPlaying = true;
@@ -366,10 +364,9 @@
                 console.error("[FRONTEND] loadPlaylistPair: Erro EXCEPCIONAL:", error);
                 showMessage("Ocorreu um erro crítico ao processar as playlists.");
             } finally {
-                isLoadingPlaylist = false; // Certifique-se de que isso é definido como false
+                isLoadingPlaylist = false; 
                 updateButtonStates();
-                // Esconde o modal apenas se não estiver mais carregando E não houver outra mensagem importante
-                if (messageModal && messageModal.textContent.startsWith("Carregando playlist:")) {
+                if (messageModal && modalMessageText && modalMessageText.textContent.startsWith("Carregando playlist:")) {
                      messageModal.classList.add('hidden');
                 }
                 console.log("[FRONTEND] loadPlaylistPair FINALIZADO.");
@@ -397,12 +394,12 @@
 
             if (player1) {
                 if (videoId1) player1.loadVideoById({ videoId: videoId1, startSeconds: seekTime1 });
-                else player1.stopVideo(); // Para o player se não houver vídeo
+                else player1.stopVideo(); 
                 player1.setPlaybackRate(globalSpeed);
             }
             if (player2) {
                 if (videoId2) player2.loadVideoById({ videoId: videoId2, startSeconds: seekTime2 });
-                else player2.stopVideo(); // Para o player se não houver vídeo
+                else player2.stopVideo(); 
                 player2.setPlaybackRate(globalSpeed);
             }
 
@@ -417,25 +414,20 @@
             console.log("[FRONTEND] loadCurrentVideos FINALIZADO.");
         }
 
-        // --- Event Listeners para Controles ---
         if(playPauseButton) playPauseButton.addEventListener('click', () => {
             console.log("[FRONTEND] Botão Play/Pause clicado. isPlaying:", isPlaying);
             if (!playersReady.p1 || !playersReady.p2 || isLoadingPlaylist) {
                 console.log("[FRONTEND] Play/Pause ignorado: players não prontos ou carregando.");
                 return;
             }
-            // A variável isPlaying é atualizada pelos eventos onStateChange
-            // Portanto, aqui apenas alternamos a ação desejada.
             if (player1 && player2) {
                 const player1State = player1.getPlayerState();
                 const player2State = player2.getPlayerState();
-
-                // Se algum estiver pausado ou não iniciado, ou bufferizando, tenta dar play
                 if (player1State !== YT.PlayerState.PLAYING || player2State !== YT.PlayerState.PLAYING) {
                     console.log("[FRONTEND] Play/Pause: Solicitando PLAY para ambos os players.");
                     player1.playVideo();
                     player2.playVideo();
-                } else { // Se ambos estiverem tocando, pausa
+                } else { 
                     console.log("[FRONTEND] Play/Pause: Solicitando PAUSE para ambos os players.");
                     player1.pauseVideo();
                     player2.pauseVideo();
@@ -524,10 +516,8 @@
         
         window.addEventListener('resize', () => { /* ... (lógica de redimensionamento, se necessário) ... */ });
 
-        // --- Inicialização da API do YouTube ---
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
         var tag = document.createElement('script');
-        // MODIFICADO: Usar a URL padrão da API
         tag.src = "https://www.youtube.com/iframe_api"; 
         var firstScriptTag = document.getElementsByTagName('script')[0];
         if (firstScriptTag && firstScriptTag.parentNode) {
