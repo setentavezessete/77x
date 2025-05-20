@@ -9,41 +9,41 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            overscroll-behavior-y: contain; /* Previne pull-to-refresh no mobile */
-            background-color: #111827; /* bg-gray-900 */
-            color: #f9fafb; /* text-white aproximado */
+            overscroll-behavior-y: contain; 
+            background-color: #111827; 
+            color: #f9fafb; 
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            padding: 1rem; /* p-4 */
-            overflow: hidden; /* Evita scrollbars desnecessários no body */
+            padding: 1rem; 
+            overflow: hidden; 
         }
         input[type="range"].vertical-slider {
             writing-mode: bt-lr;
             -webkit-appearance: slider-vertical;
             appearance: slider-vertical;
             width: 8px;
-            height: 100%; /* Será ajustado por JS se necessário */
+            height: 100%; 
             padding: 0 5px;
         }
-        .player-container { /* Container para o iframe do player */
+        .player-container { 
             background-color: black;
-            border-radius: 0.5rem; /* rounded-lg */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
-            overflow: hidden; /* Garante que o iframe não ultrapasse as bordas arredondadas */
+            border-radius: 0.5rem; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); 
+            overflow: hidden; 
         }
         .player-container iframe {
             width: 100%;
             height: 100%;
-            aspect-ratio: 9 / 16; /* Proporção para shorts */
+            aspect-ratio: 9 / 16; 
         }
         .disabled-button {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        .modal { /* Estilo para o modal de mensagens */
+        .modal { 
             position: fixed;
             left: 0;
             top: 0;
@@ -60,7 +60,7 @@
             padding: 20px;
             border-radius: 8px;
             text-align: center;
-            color: #1f2937; /* text-gray-800 */
+            color: #1f2937; 
         }
     </style>
 </head>
@@ -121,25 +121,22 @@
     <script>
         console.log("[FRONTEND] Script principal iniciado.");
 
-        // --- Configuração das Playlists ---
         const PLAYLIST_PAIRS = [
             { name: "Canal Mix 1", p1: "PL7inlxn_ITUdfVKCmcUTI8MX0aBGb54R1", p2: "PLuM5GSpnFsFjtu-0tzNxU-oWiDNtGWvD2", videos1: [], videos2: [] },
             { name: "Canal Mix 2", p1: "PLuM5GSpnFsFjDMdpuOn7D68sWTHLJ9LFc", p2: "PL7inlxn_ITUc7ONd-6OvjjbpoJKgqzjgX", videos1: [], videos2: [] },
             { name: "Canal Mix 3", p1: "PLuM5GSpnFsFjqEu0phYfdq0-5dKFr5A_N", p2: "PL7inlxn_ITUe7W5aD7xme1KtTYpA32UtZ", videos1: [], videos2: [] }
         ];
 
-        // --- Variáveis de Estado Globais ---
         let player1, player2;
         let currentPlaylistPairIndex = 0;
-        let currentVideoIndices = [0, 0]; // [indexP1, indexP2]
+        let currentVideoIndices = [0, 0];
         let globalSpeed = 1.0;
-        let globalSyncOffset = 0.0; // Em segundos. Negativo: P1 atrasa, P2 adianta. Positivo: P1 adianta, P2 atrasa.
+        let globalSyncOffset = 0.0;
         let isPlaying = false;
         let playersReady = { p1: false, p2: false };
-        let playersEnded = { p1: false, p2: false };
+        let playersEnded = { p1: false, p2: false }; // Alterado para p1, p2 minúsculo
         let isLoadingPlaylist = false;
 
-        // --- Elementos do DOM (garantir que são buscados após o DOM carregar ou no final do body) ---
         const speedRange = document.getElementById('speedRange');
         const speedValueDisplay = document.getElementById('speedValue');
         const syncRange = document.getElementById('syncRange');
@@ -159,11 +156,7 @@
         const modalCloseButton = document.getElementById('modalCloseButton');
         const player1Container = document.getElementById('player1-container');
         const player2Container = document.getElementById('player2-container');
-        const volumeContainer1 = document.getElementById('volumeContainer1');
-        const volumeContainer2 = document.getElementById('volumeContainer2');
 
-
-        // --- Funções Utilitárias ---
         function showMessage(message) {
             console.log("[FRONTEND] showMessage:", message);
             if (modalMessageText && messageModal) {
@@ -210,28 +203,39 @@
         }
 
         // --- API IFrame do YouTube ---
+        // Esta função é chamada automaticamente pela API do YouTube após o script ser carregado.
         function onYouTubeIframeAPIReady() {
             console.log("[FRONTEND] YouTube API Pronta (onYouTubeIframeAPIReady). Criando players...");
             if (!player1Container || !player2Container) {
-                console.error("[FRONTEND] Um ou ambos os containers de player (player1-container, player2-container) não foram encontrados!");
+                console.error("[FRONTEND] Um ou ambos os containers de player não foram encontrados!");
                 showMessage("Erro crítico: Estrutura da página incompleta. Players não podem ser criados.");
                 return;
             }
             const playerWidth = player1Container.offsetWidth;
             const playerHeight = player1Container.offsetHeight;
 
+            // Obtém a origem da janela atual para o parâmetro 'origin'
+            const currentOrigin = window.location.protocol + "//" + window.location.hostname + (window.location.port ? ':' + window.location.port: '');
+            console.log("[FRONTEND] Origem para playerVars:", currentOrigin);
+
             try {
                 player1 = new YT.Player('player1', {
                     height: playerHeight, width: playerWidth,
-                    playerVars: { 'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1 },
+                    playerVars: { 
+                        'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
+                        'origin': currentOrigin // ADICIONADO: Especifica a origem
+                    },
                     events: { 'onReady': onPlayer1Ready, 'onStateChange': onPlayer1StateChange, 'onError': (e) => onPlayerError('Player 1', e) }
                 });
                 player2 = new YT.Player('player2', {
                     height: playerHeight, width: playerWidth,
-                    playerVars: { 'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1 },
+                    playerVars: { 
+                        'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
+                        'origin': currentOrigin // ADICIONADO: Especifica a origem
+                    },
                     events: { 'onReady': onPlayer2Ready, 'onStateChange': onPlayer2StateChange, 'onError': (e) => onPlayerError('Player 2', e) }
                 });
-                console.log("[FRONTEND] Instâncias YT.Player solicitadas.");
+                console.log("[FRONTEND] Instâncias YT.Player solicitadas com 'origin' configurado.");
             } catch (error) {
                 console.error("[FRONTEND] Erro EXCEPCIONAL ao tentar criar instâncias YT.Player:", error);
                 showMessage("Erro crítico ao inicializar a API do YouTube. Verifique o console para detalhes técnicos.");
@@ -261,27 +265,29 @@
             console.log(`[FRONTEND] checkAllPlayersReady: P1=${playersReady.p1}, P2=${playersReady.p2}`);
             if (playersReady.p1 && playersReady.p2) {
                 console.log("[FRONTEND] Ambos os players estão prontos. Carregando playlist pair inicial.");
-                loadPlaylistPair(currentPlaylistPairIndex, false); // Não autoplay na carga inicial
+                loadPlaylistPair(currentPlaylistPairIndex, false);
                 updateButtonStates();
             }
         }
 
-        function onPlayer1StateChange(event) { handlePlayerStateChange(event, 'P1', player1); }
-        function onPlayer2StateChange(event) { handlePlayerStateChange(event, 'P2', player2); }
+        function onPlayer1StateChange(event) { handlePlayerStateChange(event, 'P1'); } // Removido playerInstance daqui
+        function onPlayer2StateChange(event) { handlePlayerStateChange(event, 'P2'); } // Removido playerInstance daqui
 
-        function handlePlayerStateChange(event, playerKey, playerInstance) {
+        function handlePlayerStateChange(event, playerKey) { // Removido playerInstance daqui
             let stateName = Object.keys(YT.PlayerState).find(key => YT.PlayerState[key] === event.data) || 'DESCONHECIDO';
             console.log(`[FRONTEND] ${playerKey} State Change: ${event.data} (${stateName})`);
             
+            const playerEndedKey = playerKey.toLowerCase(); // 'p1' ou 'p2'
+
             if (event.data === YT.PlayerState.PLAYING) {
                 isPlaying = true;
                 if(playPauseButton) playPauseButton.textContent = 'Pause';
-                playersEnded[playerKey.toLowerCase()] = false; // Usa p1 ou p2
+                playersEnded[playerEndedKey] = false;
             } else if (event.data === YT.PlayerState.PAUSED) {
                 isPlaying = false;
                 if(playPauseButton) playPauseButton.textContent = 'Play';
             } else if (event.data === YT.PlayerState.ENDED) {
-                playersEnded[playerKey.toLowerCase()] = true;
+                playersEnded[playerEndedKey] = true;
                 if (playersEnded.p1 && playersEnded.p2) {
                     console.log("[FRONTEND] Ambos os vídeos terminaram. Avançando/Looping.");
                     playersEnded.p1 = false; playersEnded.p2 = false;
@@ -299,7 +305,7 @@
                         console.log("[FRONTEND] Fim das playlists, reiniciando do primeiro vídeo de cada.");
                         currentVideoIndices = [0,0];
                     }
-                    loadCurrentVideos(true); // Autoplay no loop/próximo
+                    loadCurrentVideos(true);
                 }
             }
             updateButtonStates();
@@ -313,11 +319,8 @@
                 console.log(`[FRONTEND] fetchPlaylistVideos: Resposta do backend para ${playlistId} - Status: ${response.status}`);
                 if (!response.ok) {
                     let errorData;
-                    try {
-                        errorData = await response.json();
-                    } catch (e) {
-                        errorData = { error: `Falha ao decodificar JSON de erro do backend. Status: ${response.statusText}` };
-                    }
+                    try { errorData = await response.json(); } 
+                    catch (e) { errorData = { error: `Falha ao decodificar JSON de erro do backend. Status: ${response.statusText}` }; }
                     console.error(`[FRONTEND] fetchPlaylistVideos: Erro ao buscar playlist ${playlistId} do backend. Status ${response.status}`, errorData);
                     showMessage(`Erro (${response.status}) ao buscar playlist ${playlistId}: ${errorData.error || response.statusText}`);
                     return [];
@@ -353,19 +356,22 @@
 
                 if ((!pair.videos1 || pair.videos1.length === 0) && (!pair.videos2 || pair.videos2.length === 0)) {
                     showMessage(`Nenhum vídeo encontrado para as playlists em "${pair.name}".`);
-                } // Adicionar mais mensagens de erro específicas se necessário
+                }
 
                 currentVideoIndices = [0, 0];
                 console.log("[FRONTEND] loadPlaylistPair: Índices de vídeo resetados. Chamando loadCurrentVideos.");
                 loadCurrentVideos(autoplay);
-                 if(messageModal && !isLoadingPlaylist) messageModal.classList.add('hidden'); // Esconde se não houver mais carregamento
-
+                
             } catch (error) {
                 console.error("[FRONTEND] loadPlaylistPair: Erro EXCEPCIONAL:", error);
                 showMessage("Ocorreu um erro crítico ao processar as playlists.");
             } finally {
-                isLoadingPlaylist = false;
+                isLoadingPlaylist = false; // Certifique-se de que isso é definido como false
                 updateButtonStates();
+                // Esconde o modal apenas se não estiver mais carregando E não houver outra mensagem importante
+                if (messageModal && messageModal.textContent.startsWith("Carregando playlist:")) {
+                     messageModal.classList.add('hidden');
+                }
                 console.log("[FRONTEND] loadPlaylistPair FINALIZADO.");
             }
         }
@@ -391,12 +397,12 @@
 
             if (player1) {
                 if (videoId1) player1.loadVideoById({ videoId: videoId1, startSeconds: seekTime1 });
-                else player1.stopVideo();
+                else player1.stopVideo(); // Para o player se não houver vídeo
                 player1.setPlaybackRate(globalSpeed);
             }
             if (player2) {
                 if (videoId2) player2.loadVideoById({ videoId: videoId2, startSeconds: seekTime2 });
-                else player2.stopVideo();
+                else player2.stopVideo(); // Para o player se não houver vídeo
                 player2.setPlaybackRate(globalSpeed);
             }
 
@@ -405,7 +411,7 @@
                     console.log(`[FRONTEND] loadCurrentVideos: Autoplay para ID1=${videoId1}, ID2=${videoId2}`);
                     if (videoId1 && player1 && typeof player1.playVideo === 'function') player1.playVideo();
                     if (videoId2 && player2 && typeof player2.playVideo === 'function') player2.playVideo();
-                }, 350); // Aumentado para garantir que o vídeo esteja pronto
+                }, 350);
             }
             updateButtonStates();
             console.log("[FRONTEND] loadCurrentVideos FINALIZADO.");
@@ -413,38 +419,116 @@
 
         // --- Event Listeners para Controles ---
         if(playPauseButton) playPauseButton.addEventListener('click', () => {
-            console.log("[FRONTEND] Botão Play/Pause clicado.");
-            if (!playersReady.p1 || !playersReady.p2 || isLoadingPlaylist) return;
-            if (isPlaying) {
-                if(player1) player1.pauseVideo();
-                if(player2) player2.pauseVideo();
-            } else {
-                if(player1) player1.playVideo();
-                if(player2) player2.playVideo();
+            console.log("[FRONTEND] Botão Play/Pause clicado. isPlaying:", isPlaying);
+            if (!playersReady.p1 || !playersReady.p2 || isLoadingPlaylist) {
+                console.log("[FRONTEND] Play/Pause ignorado: players não prontos ou carregando.");
+                return;
+            }
+            // A variável isPlaying é atualizada pelos eventos onStateChange
+            // Portanto, aqui apenas alternamos a ação desejada.
+            if (player1 && player2) {
+                const player1State = player1.getPlayerState();
+                const player2State = player2.getPlayerState();
+
+                // Se algum estiver pausado ou não iniciado, ou bufferizando, tenta dar play
+                if (player1State !== YT.PlayerState.PLAYING || player2State !== YT.PlayerState.PLAYING) {
+                    console.log("[FRONTEND] Play/Pause: Solicitando PLAY para ambos os players.");
+                    player1.playVideo();
+                    player2.playVideo();
+                } else { // Se ambos estiverem tocando, pausa
+                    console.log("[FRONTEND] Play/Pause: Solicitando PAUSE para ambos os players.");
+                    player1.pauseVideo();
+                    player2.pauseVideo();
+                }
             }
         });
-        if(nextVideoButton) nextVideoButton.addEventListener('click', () => { /* ... lógica ... */ loadCurrentVideos(isPlaying); });
-        if(prevVideoButton) prevVideoButton.addEventListener('click', () => { /* ... lógica ... */ loadCurrentVideos(isPlaying); });
-        if(nextPlaylistButton) nextPlaylistButton.addEventListener('click', () => { if (currentPlaylistPairIndex < PLAYLIST_PAIRS.length - 1) loadPlaylistPair(currentPlaylistPairIndex + 1, isPlaying); });
-        if(prevPlaylistButton) prevPlaylistButton.addEventListener('click', () => { if (currentPlaylistPairIndex > 0) loadPlaylistPair(currentPlaylistPairIndex - 1, isPlaying); });
-        if(speedRange) speedRange.addEventListener('input', (e) => { /* ... lógica ... */ });
+
+        if(nextVideoButton) nextVideoButton.addEventListener('click', () => {
+            console.log("[FRONTEND] Botão Próximo Vídeo clicado.");
+            if (isLoadingPlaylist) return;
+            const pair = PLAYLIST_PAIRS[currentPlaylistPairIndex];
+            let changed = false;
+            if (pair.videos1 && pair.videos1.length > 0 && currentVideoIndices[0] < pair.videos1.length - 1) {
+                currentVideoIndices[0]++;
+                changed = true;
+            }
+            if (pair.videos2 && pair.videos2.length > 0 && currentVideoIndices[1] < pair.videos2.length - 1) {
+                currentVideoIndices[1]++;
+                changed = true;
+            }
+            if (changed) loadCurrentVideos(isPlaying); else updateButtonStates();
+        });
+
+        if(prevVideoButton) prevVideoButton.addEventListener('click', () => {
+            console.log("[FRONTEND] Botão Vídeo Anterior clicado.");
+            if (isLoadingPlaylist) return;
+            let changed = false;
+            if (currentVideoIndices[0] > 0) { currentVideoIndices[0]--; changed = true; }
+            if (currentVideoIndices[1] > 0) { currentVideoIndices[1]--; changed = true; }
+            if (changed) loadCurrentVideos(isPlaying); else updateButtonStates();
+        });
+
+        if(nextPlaylistButton) nextPlaylistButton.addEventListener('click', () => {
+            console.log("[FRONTEND] Botão Próxima Playlist clicado.");
+            if (currentPlaylistPairIndex < PLAYLIST_PAIRS.length - 1) {
+                loadPlaylistPair(currentPlaylistPairIndex + 1, isPlaying);
+            } else { updateButtonStates(); }
+        });
+
+        if(prevPlaylistButton) prevPlaylistButton.addEventListener('click', () => {
+            console.log("[FRONTEND] Botão Playlist Anterior clicado.");
+            if (currentPlaylistPairIndex > 0) {
+                loadPlaylistPair(currentPlaylistPairIndex - 1, isPlaying);
+            } else { updateButtonStates(); }
+        });
+        
+        if(speedRange) speedRange.addEventListener('input', (e) => {
+            const sliderValue = parseInt(e.target.value);
+            if (sliderValue === 0) globalSpeed = 1.0;
+            else if (sliderValue < 0) globalSpeed = 1.0 + (sliderValue / 50) * (1.0 - 0.07);
+            else globalSpeed = 1.0 + (sliderValue / 50) * (3.0 - 1.0);
+            globalSpeed = Math.max(0.07, Math.min(3.0, globalSpeed));
+            if(speedValueDisplay) speedValueDisplay.textContent = globalSpeed.toFixed(2);
+            if (player1) player1.setPlaybackRate(globalSpeed);
+            if (player2) player2.setPlaybackRate(globalSpeed);
+        });
+
         if(syncRange) {
-            syncRange.addEventListener('input', (e) => { /* ... lógica ... */ });
-            syncRange.addEventListener('change', () => loadCurrentVideos(isPlaying));
+            syncRange.addEventListener('input', (e) => {
+                globalSyncOffset = parseInt(e.target.value) / 100.0;
+                if(syncValueDisplay) syncValueDisplay.textContent = globalSyncOffset.toFixed(2);
+            });
+            syncRange.addEventListener('change', () => {
+                console.log("[FRONTEND] SyncRange 'change': Recarregando vídeos com novo offset.");
+                loadCurrentVideos(isPlaying);
+            });
         }
         if(volumeRange1) volumeRange1.addEventListener('input', (e) => { if (player1) player1.setVolume(parseInt(e.target.value)); });
         if(volumeRange2) volumeRange2.addEventListener('input', (e) => { if (player2) player2.setVolume(parseInt(e.target.value)); });
+        
         if(fullscreenButton) fullscreenButton.addEventListener('click', () => toggleFullScreen(appContainer));
         if(player1Container) player1Container.addEventListener('dblclick', () => toggleFullScreen(appContainer));
         if(player2Container) player2Container.addEventListener('dblclick', () => toggleFullScreen(appContainer));
 
-        function toggleFullScreen(elem) { /* ... lógica ... */ }
-        window.addEventListener('resize', () => { /* ... lógica de redimensionamento ... */ });
+        function toggleFullScreen(elem) { 
+            if (!document.fullscreenElement) {
+                if (elem && elem.requestFullscreen) {
+                    elem.requestFullscreen().catch(err => {
+                        showMessage(`Erro tela cheia: ${err.message}`);
+                    });
+                }
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+        
+        window.addEventListener('resize', () => { /* ... (lógica de redimensionamento, se necessário) ... */ });
 
         // --- Inicialização da API do YouTube ---
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
         var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api"; // URL oficial e correta da API
+        // MODIFICADO: Usar a URL padrão da API
+        tag.src = "https://www.youtube.com/iframe_api"; 
         var firstScriptTag = document.getElementsByTagName('script')[0];
         if (firstScriptTag && firstScriptTag.parentNode) {
             firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
@@ -453,6 +537,8 @@
             document.head.appendChild(tag);
         }
         console.log("[FRONTEND] Tag do script da API IFrame do YouTube inserida no DOM.");
+
     </script>
 </body>
 </html>
+
