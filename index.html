@@ -149,15 +149,37 @@
     <script>
         console.log("[FRONTEND] Script principal iniciado.");
 
+        // MODIFICADO: Mover a atribuição de elementos do DOM para o topo do script
+        const speedRange = document.getElementById('speedRange');
+        const speedValueDisplay = document.getElementById('speedValue');
+        const syncRange = document.getElementById('syncRange');
+        const syncValueDisplay = document.getElementById('syncValue');
+        const volumeRange1 = document.getElementById('volumeRange1');
+        const volumeRange2 = document.getElementById('volumeRange2');
+        const prevVideoButton = document.getElementById('prevVideoButton');
+        const nextVideoButton = document.getElementById('nextVideoButton');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const prevPlaylistButton = document.getElementById('prevPlaylistButton');
+        const nextPlaylistButton = document.getElementById('nextPlaylistButton');
+        const currentPlaylistNameDisplay = document.getElementById('currentPlaylistName');
+        const appContainer = document.getElementById('app-container');
+        const messageModal = document.getElementById('messageModal');
+        const modalMessageText = document.getElementById('modalMessageText');
+        const modalCloseButton = document.getElementById('modalCloseButton');
+        const player1Container = document.getElementById('player1-container');
+        const player2Container = document.getElementById('player2-container');
+        const openYouTubeButton1 = document.getElementById('openYouTube1');
+        const openYouTubeButton2 = document.getElementById('openYouTube2');
+        // Adicionar quaisquer outros getElementById que possam estar faltando aqui
+
         const PLAYLIST_PAIRS = [
             { name: "Canal Mix 1", p1: "PL7inlxn_ITUdfVKCmcUTI8MX0aBGb54R1", p2: "PLuM5GSpnFsFjtu-0tzNxU-oWiDNtGWvD2", videos1: [], videos2: [] },
             { name: "Canal Mix 2", p1: "PLuM5GSpnFsFjDMdpuOn7D68sWTHLJ9LFc", p2: "PL7inlxn_ITUc7ONd-6OvjjbpoJKgqzjgX", videos1: [], videos2: [] },
             { name: "Canal Mix 3", p1: "PLuM5GSpnFsFjqEu0phYfdq0-5dKFr5A_N", p2: "PL7inlxn_ITUe7W5aD7xme1KtTYpA32UtZ", videos1: [], videos2: [] }
         ];
 
-        // IDs de vídeo de teste (curtos e que geralmente permitem incorporação)
-        const TEST_VIDEO_ID_1 = "dQw4w9WgXcQ"; // Rick Astley (muito usado para testes)
-        const TEST_VIDEO_ID_2 = "kJQP7kiw5Fk"; // Google I/O Keynote (exemplo)
+        const TEST_VIDEO_ID_1 = "dQw4w9WgXcQ"; 
+        const TEST_VIDEO_ID_2 = "kJQP7kiw5Fk"; 
 
         let player1, player2;
         let currentPlaylistPairIndex = 0;
@@ -169,28 +191,43 @@
         let playersEnded = { p1: false, p2: false };
         let isLoadingPlaylist = false;
 
-        // ... (busca de elementos do DOM - código existente) ...
-        const speedRange = document.getElementById('speedRange');
-        const speedValueDisplay = document.getElementById('speedValue');
-        // ... (todos os outros)
-
         function showMessage(message, isError = false) {
             console.log(`[FRONTEND] showMessage (isError: ${isError}):`, message);
-            // ... (código existente)
+            if (modalMessageText && messageModal) {
+                modalMessageText.textContent = message;
+                messageModal.classList.remove('hidden');
+            } else {
+                console.error("[FRONTEND] Elementos do modal não encontrados para showMessage.");
+            }
         }
-        // ... (código existente para modalCloseButton e updateButtonStates)
+
+        if (modalCloseButton) {
+            modalCloseButton.addEventListener('click', () => {
+                if(messageModal) messageModal.classList.add('hidden');
+            });
+        } else {
+             console.warn("[FRONTEND] modalCloseButton não encontrado.");
+        }
+
+        function updateButtonStates() {
+             // Implementação básica para evitar erros, será reativada depois
+            console.log("[FRONTEND] updateButtonStates chamada (lógica de playlist comentada).");
+            if(playPauseButton) playPauseButton.disabled = !(playersReady.p1 && playersReady.p2);
+        }
+
 
         function onYouTubeIframeAPIReady() {
             console.log("[FRONTEND] YouTube API Pronta. Criando players com VÍDEOS DE TESTE...");
+            // As constantes player1Container e player2Container já devem estar definidas aqui
             if (!player1Container || !player2Container) {
-                console.error("[FRONTEND] Containers de player não encontrados!");
-                showMessage("Erro crítico: Estrutura da página incompleta.", true);
+                console.error("[FRONTEND] FATAL: Containers de player não definidos ANTES de onYouTubeIframeAPIReady.");
+                showMessage("Erro crítico: Falha ao carregar a estrutura da página. Contacte o suporte.", true);
                 return;
             }
             const playerWidth = player1Container.offsetWidth;
             const playerHeight = player1Container.offsetHeight;
             const pageOrigin = window.location.origin;
-            console.log("[FRONTEND] Origem para playerVars:", pageOrigin);
+            console.log("[FRONTEND] Origem para playerVars:", pageOrigin, "Dimensões:", playerWidth, "x", playerHeight);
 
             const commonPlayerVars = {
                 'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
@@ -200,13 +237,13 @@
             try {
                 player1 = new YT.Player('player1', {
                     height: playerHeight, width: playerWidth,
-                    videoId: TEST_VIDEO_ID_1, // MODIFICADO: Carrega vídeo de teste na inicialização
+                    videoId: TEST_VIDEO_ID_1,
                     playerVars: { ...commonPlayerVars },
                     events: { 'onReady': onPlayer1Ready, 'onStateChange': onPlayer1StateChange, 'onError': (e) => onPlayerError('Player 1', e) }
                 });
                 player2 = new YT.Player('player2', {
                     height: playerHeight, width: playerWidth,
-                    videoId: TEST_VIDEO_ID_2, // MODIFICADO: Carrega vídeo de teste na inicialização
+                    videoId: TEST_VIDEO_ID_2,
                     playerVars: { ...commonPlayerVars },
                     events: { 'onReady': onPlayer2Ready, 'onStateChange': onPlayer2StateChange, 'onError': (e) => onPlayerError('Player 2', e) }
                 });
@@ -226,16 +263,11 @@
             console.log("[FRONTEND] Player 1 Pronto (onPlayerReady). Vídeo de teste deveria estar carregado.");
             playersReady.p1 = true;
             if(player1 && volumeRange1) player1.setVolume(parseInt(volumeRange1.value));
-            // NÃO CHAMA checkAllPlayersReady AINDA, pois queremos testar o carregamento básico primeiro
-            // checkAllPlayersReady(); 
-            // Se os vídeos de teste carregarem, podemos reabilitar a lógica de playlist
             if (playersReady.p1 && playersReady.p2) {
                  console.log("[FRONTEND] Ambos os players de teste estão prontos. Habilitando controles...");
-                 // Habilitar botões básicos se necessário, ou iniciar a lógica de playlist se o teste for bem-sucedido
-                 // loadPlaylistPair(currentPlaylistPairIndex, false); // Comentado para teste inicial
-                 updateButtonStates(); // Atualiza estado dos botões
+                 updateButtonStates(); 
                  if (messageModal && !messageModal.classList.contains('hidden')) {
-                    messageModal.classList.add('hidden'); // Esconde modal de carregamento se estava visível
+                    messageModal.classList.add('hidden'); 
                  }
             }
         }
@@ -243,66 +275,57 @@
             console.log("[FRONTEND] Player 2 Pronto (onPlayerReady). Vídeo de teste deveria estar carregado.");
             playersReady.p2 = true;
             if(player2 && volumeRange2) player2.setVolume(parseInt(volumeRange2.value));
-            // NÃO CHAMA checkAllPlayersReady AINDA
-            // checkAllPlayersReady();
             if (playersReady.p1 && playersReady.p2) {
                  console.log("[FRONTEND] Ambos os players de teste estão prontos. Habilitando controles...");
-                 // loadPlaylistPair(currentPlaylistPairIndex, false); // Comentado para teste inicial
                  updateButtonStates();
                  if (messageModal && !messageModal.classList.contains('hidden')) {
                     messageModal.classList.add('hidden');
                  }
             }
         }
+        
+        // Lógica de playlist e vídeo comentada para teste básico
+        function onPlayer1StateChange(event) { console.log("[FRONTEND] P1 State Change (Teste Básico):", event.data); }
+        function onPlayer2StateChange(event) { console.log("[FRONTEND] P2 State Change (Teste Básico):", event.data); }
 
-        // Comentando a lógica de playlist por enquanto para focar no carregamento básico do player
-        /*
-        function checkAllPlayersReady() {
-            // ...
-        }
-        function handlePlayerStateChange(event, playerKey) {
-            // ...
-        }
-        async function fetchPlaylistVideos(playlistId) {
-            // ...
-        }
-        async function loadPlaylistPair(pairIndex, autoplay = false) {
-            // ...
-        }
-        function loadCurrentVideos(autoplay = false) {
-            // ...
-        }
+        /* // Lógica completa de playlist será reativada depois
+        function checkAllPlayersReady() { ... }
+        function handlePlayerStateChange(event, playerKey) { ... }
+        async function fetchPlaylistVideos(playlistId) { ... }
+        async function loadPlaylistPair(pairIndex, autoplay = false) { ... }
+        function loadCurrentVideos(autoplay = false) { ... }
         */
 
-        // --- Event Listeners para Controles (Manter alguns para interatividade básica se os players carregarem) ---
         if(playPauseButton) playPauseButton.addEventListener('click', () => {
-            console.log("[FRONTEND] Botão Play/Pause clicado.");
-            if (!playersReady.p1 || !playersReady.p2) return;
+            console.log("[FRONTEND] Botão Play/Pause clicado (Teste Básico).");
+            if (!playersReady.p1 || !playersReady.p2 || !player1 || !player2) {
+                 console.warn("[FRONTEND] Players não prontos para Play/Pause.");
+                 return;
+            }
             
-            // Simples toggle para os players de teste
-            if (player1 && player2) {
-                const p1State = player1.getPlayerState();
-                const p2State = player2.getPlayerState();
-                if (p1State !== YT.PlayerState.PLAYING || p2State !== YT.PlayerState.PLAYING) {
-                    player1.playVideo();
-                    player2.playVideo();
-                    playPauseButton.textContent = 'Pause';
-                    isPlaying = true;
-                } else {
-                    player1.pauseVideo();
-                    player2.pauseVideo();
-                    playPauseButton.textContent = 'Play';
-                    isPlaying = false;
-                }
+            const p1State = player1.getPlayerState();
+            const p2State = player2.getPlayerState();
+
+            if (p1State !== YT.PlayerState.PLAYING || p2State !== YT.PlayerState.PLAYING) {
+                if(typeof player1.playVideo === 'function') player1.playVideo();
+                if(typeof player2.playVideo === 'function') player2.playVideo();
+                playPauseButton.textContent = 'Pause';
+            } else {
+                if(typeof player1.pauseVideo === 'function') player1.pauseVideo();
+                if(typeof player2.pauseVideo === 'function') player2.pauseVideo();
+                playPauseButton.textContent = 'Play';
             }
         });
         
-        // Outros event listeners podem ser reabilitados depois que o carregamento básico funcionar
-        // if(nextVideoButton) ...
-        // if(prevVideoButton) ...
-        // ...
+        // Desabilitar outros botões por enquanto, pois a lógica de playlist está comentada
+        if(prevVideoButton) prevVideoButton.disabled = true;
+        if(nextVideoButton) nextVideoButton.disabled = true;
+        if(prevPlaylistButton) prevPlaylistButton.disabled = true;
+        if(nextPlaylistButton) nextPlaylistButton.disabled = true;
+        if(openYouTubeButton1) openYouTubeButton1.disabled = true; // Será reabilitado com a lógica de playlist
+        if(openYouTubeButton2) openYouTubeButton2.disabled = true; // Será reabilitado com a lógica de playlist
 
-        // --- Inicialização da API do YouTube ---
+
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
         var tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api"; 
