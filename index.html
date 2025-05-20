@@ -213,37 +213,33 @@
             if (errorCodesToSkip.includes(event.data)) {
                 console.log(`[FRONTEND] Erro ${event.data} no ${playerName} (playerIndex ${playerIndex}). Tentando avançar.`);
                 
+                // LOG ADICIONADO: Verificar o estado de PLAYLIST_PAIRS e currentVideoIndices AQUI
+                console.log(`[FRONTEND] onPlayerError - Estado ANTES de avançar para ${playerName}:`);
+                console.log(`  - currentPlaylistPairIndex: ${currentPlaylistPairIndex}`);
+                console.log(`  - PLAYLIST_PAIRS[${currentPlaylistPairIndex}]:`, JSON.parse(JSON.stringify(PLAYLIST_PAIRS[currentPlaylistPairIndex])));
+                console.log(`  - currentVideoIndices: [${currentVideoIndices[0]}, ${currentVideoIndices[1]}]`);
+
                 const currentPair = PLAYLIST_PAIRS[currentPlaylistPairIndex];
                 let videoList;
-                let otherPlayerVideoIndex;
-
-                if (playerIndex === 0) { // Erro no Player 1
+                if (playerIndex === 0) { 
                     videoList = currentPair.videos1;
-                    otherPlayerVideoIndex = currentVideoIndices[1]; // Mantém o índice do Player 2
-                } else { // Erro no Player 2
+                } else { 
                     videoList = currentPair.videos2;
-                    otherPlayerVideoIndex = currentVideoIndices[0]; // Mantém o índice do Player 1
                 }
 
-                // Log detalhado ANTES de tentar avançar
-                console.log(`[FRONTEND] onPlayerError - ${playerName}:`);
-                console.log(`  - playerIndex: ${playerIndex}`);
-                console.log(`  - currentVideoIndices ANTES: [${currentVideoIndices[0]}, ${currentVideoIndices[1]}]`);
-                console.log(`  - videoList existe: ${!!videoList}`);
+                console.log(`[FRONTEND] onPlayerError - ${playerName} (continuação):`);
+                console.log(`  - videoList (currentPair.videos${playerIndex + 1}) existe: ${!!videoList}`);
                 if (videoList) {
-                    console.log(`  - videoList.length: ${videoList.length}`);
+                    console.log(`  - videoList.length (currentPair.videos${playerIndex + 1}.length): ${videoList.length}`);
+                    console.log(`  - Conteúdo de videoList (currentPair.videos${playerIndex + 1}):`, JSON.parse(JSON.stringify(videoList)));
                 }
 
                 if (videoList && videoList.length > 0 && currentVideoIndices[playerIndex] < videoList.length - 1) {
                     currentVideoIndices[playerIndex]++; 
-                    console.log(`[FRONTEND] Novo índice para ${playerName} (playerIndex ${playerIndex}): ${currentVideoIndices[playerIndex]}`);
-                    // Ao recarregar, precisamos garantir que o outro player não seja afetado desnecessariamente
-                    // ou que ele recarregue seu vídeo atual para manter a sincronia se desejado.
-                    // Por simplicidade agora, vamos chamar loadCurrentVideos que recarrega ambos.
+                    console.log(`[FRONTEND] Novo índice para ${playerName} (playerIndex ${playerIndex}): ${currentVideoIndices[playerIndex]}. Chamando loadCurrentVideos.`);
                     loadCurrentVideos(isPlaying); 
                 } else {
-                    console.log(`[FRONTEND] ${playerName} no último vídeo da sua lista ou lista vazia. Não é possível avançar mais para este player.`);
-                    // Opcional: limpar o player que falhou
+                    console.log(`[FRONTEND] ${playerName} no último vídeo da sua lista (${currentVideoIndices[playerIndex]}) ou lista vazia/inválida (length: ${videoList ? videoList.length : 'undefined'}). Não é possível avançar mais para este player.`);
                     if (playerIndex === 0 && player1 && typeof player1.cueVideoById === 'function') player1.cueVideoById('');
                     if (playerIndex === 1 && player2 && typeof player2.cueVideoById === 'function') player2.cueVideoById('');
                     updateButtonStates(); 
@@ -258,7 +254,38 @@
         function onPlayer2StateChange(event) { handlePlayerStateChange(event, 'P2'); }
         function handlePlayerStateChange(event, playerKey) { /* ... (código existente com loop) ... */ }
         async function fetchPlaylistVideos(playlistId) { /* ... (código existente) ... */ }
-        async function loadPlaylistPair(pairIndex, autoplay = false) { /* ... (código existente) ... */ }
+        
+        async function loadPlaylistPair(pairIndex, autoplay = false) {
+            console.log(`[FRONTEND] loadPlaylistPair INICIADO para pairIndex: ${pairIndex}, autoplay: ${autoplay}`);
+            isLoadingPlaylist = true;
+            updateButtonStates();
+            currentPlaylistPairIndex = pairIndex;
+            const pair = PLAYLIST_PAIRS[currentPlaylistPairIndex]; // 'pair' é uma referência ao objeto no array
+            // ...
+
+            try {
+                // Estas linhas modificam DIRETAMENTE pair.videos1 e pair.videos2,
+                // que são referências aos arrays dentro de PLAYLIST_PAIRS[currentPlaylistPairIndex]
+                pair.videos1 = await fetchPlaylistVideos(pair.p1);
+                console.log(`[FRONTEND] loadPlaylistPair: Conteúdo de pair.videos1 APÓS fetch (${pair.p1}):`, JSON.parse(JSON.stringify(pair.videos1)));
+                
+                pair.videos2 = await fetchPlaylistVideos(pair.p2);
+                console.log(`[FRONTEND] loadPlaylistPair: Conteúdo de pair.videos2 APÓS fetch (${pair.p2}):`, JSON.parse(JSON.stringify(pair.videos2)));
+
+                console.log(`[FRONTEND] loadPlaylistPair: Vídeos carregados da API. P1: ${pair.videos1.length}, P2: ${pair.videos2.length}.`);
+                // LOG ADICIONADO: Verificar o estado de PLAYLIST_PAIRS após as atribuições
+                console.log(`[FRONTEND] loadPlaylistPair: Estado de PLAYLIST_PAIRS[${currentPlaylistPairIndex}] APÓS fetch:`, JSON.parse(JSON.stringify(PLAYLIST_PAIRS[currentPlaylistPairIndex])));
+
+
+                if ((!pair.videos1 || pair.videos1.length === 0) && (!pair.videos2 || pair.videos2.length === 0)) {
+                    // ...
+                }
+                currentVideoIndices = [0, 0]; 
+                loadCurrentVideos(autoplay); 
+            } catch (error) { /* ... */ } 
+            finally { /* ... */ }
+        }
+
         function loadCurrentVideos(autoplay = false) { /* ... (código existente) ... */ }
         
         // --- Event Listeners para Controles ---
@@ -268,6 +295,7 @@
         // --- Inicialização da API do YouTube ---
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
         var tag = document.createElement('script');
+        // CRÍTICO: Usar HTTPS para o script da API
         tag.src = "https://www.youtube.com/iframe_api"; 
         var firstScriptTag = document.getElementsByTagName('script')[0];
         if (firstScriptTag && firstScriptTag.parentNode) {
