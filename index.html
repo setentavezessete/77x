@@ -269,7 +269,6 @@
         
         async function checkAllPlayersReadyAndLoadConfig() {
             console.log(`[FRONTEND] checkAllPlayersReadyAndLoadConfig: P1=${playersReady.p1}, P2=${playersReady.p2}. PLAYLIST_PAIRS.length: ${PLAYLIST_PAIRS.length}`);
-            // Só busca a config e playlists se AMBOS os players estiverem prontos E PLAYLIST_PAIRS ainda não foi preenchido (length === 0)
             if (playersReady.p1 && playersReady.p2 && PLAYLIST_PAIRS.length === 0) { 
                  console.log("[FRONTEND] Ambos os players prontos e config não carregada. Buscando configuração de playlists do backend...");
                  showMessage("Buscando configuração de playlists...", false);
@@ -283,7 +282,6 @@
                  updateButtonStates(); 
             } else if (playersReady.p1 && playersReady.p2 && PLAYLIST_PAIRS.length > 0) {
                 console.log("[FRONTEND] Ambos os players prontos e PLAYLIST_PAIRS já preenchido. Não buscando config novamente. Carregando playlist atual.");
-                // Se a config já foi carregada (ex: recarga da página sem limpar estado, ou lógica futura), carrega a playlist
                 loadPlaylistPair(currentPlaylistPairIndex, false);
             }
         }
