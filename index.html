@@ -198,7 +198,8 @@
                     console.error(`[FRONTEND] fetchAppPlaylistConfig: Erro ${response.status} ao buscar config. Resposta do servidor:`, errorText);
                     let userMessage = `Erro ${response.status} ao carregar configuração de playlists.`;
                     if (response.status === 404) {
-                        userMessage += " O endpoint /api/playlists-config não foi encontrado. Verifique se o arquivo 'api/playlists-config.js' existe e foi enviado corretamente para o servidor.";
+                        userMessage += " O endpoint /api/playlists-config não foi encontrado. Verifique se o arquivo 'api/playlists-config.js' existe na pasta 'api' e foi enviado corretamente para o servidor.";
+                        if(currentPlaylistNameDisplay) currentPlaylistNameDisplay.innerHTML = `<span class="text-red-500">Erro: API de Configuração não encontrada.</span>`;
                     } else {
                         userMessage += " Verifique os logs da função na Vercel e as variáveis de ambiente CHANNEL_ID_A e CHANNEL_ID_B.";
                     }
@@ -212,6 +213,7 @@
                     PLAYLIST_PAIRS = config.map(pair => ({ ...pair, videos1: [], videos2: [] }));
                     if (PLAYLIST_PAIRS.length === 0) {
                         showMessage("Nenhum par de playlists foi formado. Verifique os IDs dos canais e se eles têm playlists.", true);
+                         if(currentPlaylistNameDisplay) currentPlaylistNameDisplay.textContent = "Nenhum par de playlists.";
                     }
                     console.log("[FRONTEND] fetchAppPlaylistConfig: PLAYLIST_PAIRS atualizado:", JSON.parse(JSON.stringify(PLAYLIST_PAIRS)));
                     return true;
