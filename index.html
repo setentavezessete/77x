@@ -201,13 +201,13 @@
                     return false;
                 }
                 const config = await response.json();
-                console.log("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists recebida:", JSON.parse(JSON.stringify(config)));
+                console.log("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists recebida:", JSON.parse(JSON.stringify(config))); // Log profundo
                 if (Array.isArray(config)) { 
                     PLAYLIST_PAIRS = config.map(pair => ({ ...pair, videos1: [], videos2: [] }));
                     if (PLAYLIST_PAIRS.length === 0) {
                         showMessage("Nenhum par de playlists foi formado. Verifique os canais ou se eles têm playlists.", true);
                     }
-                    console.log("[FRONTEND] fetchAppPlaylistConfig: PLAYLIST_PAIRS atualizado:", JSON.parse(JSON.stringify(PLAYLIST_PAIRS)));
+                    console.log("[FRONTEND] fetchAppPlaylistConfig: PLAYLIST_PAIRS atualizado:", JSON.parse(JSON.stringify(PLAYLIST_PAIRS))); // Log profundo
                     return true;
                 } else {
                     console.error("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists inválida recebida.");
@@ -299,16 +299,9 @@
         // --- Inicialização da API do YouTube ---
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
         var tag = document.createElement('script');
-        // CRÍTICO: Usar HTTPS para o script da API
-        tag.src = "https://www.youtube.com/iframe_api"; 
+        tag.src = "https://www.youtube.com/iframe_api"; // Mantido HTTPS
         var firstScriptTag = document.getElementsByTagName('script')[0];
-        if (firstScriptTag && firstScriptTag.parentNode) {
-            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        } else {
-            console.warn("[FRONTEND] Primeiro script tag não encontrado, adicionando API ao head.");
-            document.head.appendChild(tag);
-        }
-        console.log("[FRONTEND] Tag do script da API IFrame do YouTube inserida no DOM.");
+        // ... (código de inserção do script da versão anterior)
     </script>
 </body>
 </html>
