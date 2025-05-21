@@ -171,7 +171,7 @@
         const openYouTubeButton1 = document.getElementById('openYouTube1');
         const openYouTubeButton2 = document.getElementById('openYouTube2');
 
-        let PLAYLIST_PAIRS = []; // Será preenchido por fetchAppPlaylistConfig
+        let PLAYLIST_PAIRS = []; 
 
         let player1, player2;
         let currentPlaylistPairIndex = 0;
@@ -201,12 +201,13 @@
                     return false;
                 }
                 const config = await response.json();
-                console.log("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists recebida:", config);
+                console.log("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists recebida:", JSON.parse(JSON.stringify(config))); // Log profundo
                 if (Array.isArray(config)) { 
                     PLAYLIST_PAIRS = config.map(pair => ({ ...pair, videos1: [], videos2: [] }));
                     if (PLAYLIST_PAIRS.length === 0) {
                         showMessage("Nenhum par de playlists foi formado. Verifique os canais ou se eles têm playlists.", true);
                     }
+                    console.log("[FRONTEND] fetchAppPlaylistConfig: PLAYLIST_PAIRS atualizado:", JSON.parse(JSON.stringify(PLAYLIST_PAIRS))); // Log profundo
                     return true;
                 } else {
                     console.error("[FRONTEND] fetchAppPlaylistConfig: Configuração de playlists inválida recebida.");
@@ -224,17 +225,22 @@
 
         function onYouTubeIframeAPIReady() {
             console.log("[FRONTEND] YouTube API Pronta. Criando players...");
-            // ... (lógica para obter playerWidth, playerHeight, pageOrigin)
+            if (!player1Container || !player2Container) {
+                console.error("[FRONTEND] FATAL: Containers de player não definidos.");
+                showMessage("Erro crítico: Falha ao carregar a estrutura da página.", true);
+                return;
+            }
             const playerWidth = player1Container.offsetWidth;
             const playerHeight = player1Container.offsetHeight;
             const pageOrigin = window.location.origin; 
+            console.log("[FRONTEND] Origem para playerVars:", pageOrigin, "Dimensões:", playerWidth, "x", playerHeight);
 
             const commonPlayerVars = {
                 'playsinline': 1, 'controls': 0, 'showinfo': 0, 'rel': 0, 'modestbranding': 1, 'disablekb': 1,
                 'origin': pageOrigin
             };
             try {
-                player1 = new YT.Player('player1', { // Players são criados vazios; vídeos carregados depois
+                player1 = new YT.Player('player1', {
                     height: playerHeight, width: playerWidth, playerVars: { ...commonPlayerVars },
                     events: { 'onReady': onPlayer1Ready, 'onStateChange': onPlayer1StateChange, 'onError': (e) => onPlayerError('Player 1', e, 0) }
                 });
@@ -243,10 +249,10 @@
                     events: { 'onReady': onPlayer2Ready, 'onStateChange': onPlayer2StateChange, 'onError': (e) => onPlayerError('Player 2', e, 1) }
                 });
                  console.log("[FRONTEND] Instâncias YT.Player solicitadas. 'origin':", pageOrigin);
-            } catch (error) { /* ... */ }
+            } catch (error) { console.error("[FRONTEND] Erro EXCEPCIONAL ao criar YT.Player:", error); showMessage("Erro crítico ao inicializar API YouTube.", true); }
         }
 
-        function onPlayerError(playerName, event, playerIndex) { /* ... (código da versão anterior, com logs detalhados) ... */ }
+        function onPlayerError(playerName, event, playerIndex) { /* ... (código da versão anterior, com logs JSON) ... */ }
         
         async function onPlayer1Ready(event) { 
             console.log(`[FRONTEND] Player 1 Pronto (onPlayerReady).`);
@@ -262,22 +268,23 @@
         }
         
         async function checkAllPlayersReadyAndLoadConfig() {
-            console.log(`[FRONTEND] checkAllPlayersReadyAndLoadConfig: P1=${playersReady.p1}, P2=${playersReady.p2}`);
-            // Só busca a config e playlists se AMBOS os players estiverem prontos E PLAYLIST_PAIRS ainda não foi preenchido
+            console.log(`[FRONTEND] checkAllPlayersReadyAndLoadConfig: P1=${playersReady.p1}, P2=${playersReady.p2}. PLAYLIST_PAIRS.length: ${PLAYLIST_PAIRS.length}`);
+            // Só busca a config e playlists se AMBOS os players estiverem prontos E PLAYLIST_PAIRS ainda não foi preenchido (length === 0)
             if (playersReady.p1 && playersReady.p2 && PLAYLIST_PAIRS.length === 0) { 
-                 console.log("[FRONTEND] Ambos os players prontos. Buscando configuração de playlists do backend...");
+                 console.log("[FRONTEND] Ambos os players prontos e config não carregada. Buscando configuração de playlists do backend...");
                  showMessage("Buscando configuração de playlists...", false);
                  const configLoaded = await fetchAppPlaylistConfig(); 
                  if (configLoaded && PLAYLIST_PAIRS.length > 0) {
                     console.log("[FRONTEND] Configuração de playlists carregada. Iniciando carregamento da primeira playlist definida.");
                     loadPlaylistPair(currentPlaylistPairIndex, false); 
                  } else {
-                    console.error("[FRONTEND] Falha ao carregar config de playlists ou config vazia. Player não iniciará.");
-                    // showMessage já foi chamada em fetchAppPlaylistConfig
+                    console.error("[FRONTEND] Falha ao carregar config de playlists ou config vazia. Player não iniciará com playlists dinâmicas.");
                  }
                  updateButtonStates(); 
             } else if (playersReady.p1 && playersReady.p2 && PLAYLIST_PAIRS.length > 0) {
-                console.log("[FRONTEND] Ambos os players prontos e PLAYLIST_PAIRS já preenchido. Não buscando config novamente.");
+                console.log("[FRONTEND] Ambos os players prontos e PLAYLIST_PAIRS já preenchido. Não buscando config novamente. Carregando playlist atual.");
+                // Se a config já foi carregada (ex: recarga da página sem limpar estado, ou lógica futura), carrega a playlist
+                loadPlaylistPair(currentPlaylistPairIndex, false);
             }
         }
 
@@ -289,7 +296,7 @@
         function loadCurrentVideos(autoplay = false) { /* ... (código da versão anterior) ... */ }
         
         // --- Event Listeners para Controles ---
-        // ... (todos os event listeners da versão anterior, incluindo botões Remix corrigidos)
+        // ... (todos os event listeners da versão anterior, incluindo os botões Remix corrigidos)
 
         // --- Inicialização da API do YouTube ---
         console.log("[FRONTEND] Solicitando carregamento do script da API IFrame do YouTube...");
