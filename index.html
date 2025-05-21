@@ -183,9 +183,54 @@
         let playersEnded = { p1: false, p2: false };
         let isLoadingPlaylist = false;
 
-        function showMessage(message, isError = false) { /* ... (código da versão anterior) ... */ }
-        if (modalCloseButton) { /* ... (código da versão anterior) ... */ }
-        function updateButtonStates() { /* ... (código da versão anterior) ... */ }
+        function showMessage(message, isError = false) {
+            console.log(`[FRONTEND] showMessage (isError: ${isError}):`, message);
+            if (modalMessageText && messageModal) {
+                modalMessageText.textContent = message;
+                messageModal.classList.remove('hidden');
+            } else {
+                console.error("[FRONTEND] Elementos do modal (modalMessageText ou messageModal) não encontrados.");
+            }
+        }
+
+        if (modalCloseButton) {
+            modalCloseButton.addEventListener('click', () => {
+                if(messageModal) messageModal.classList.add('hidden');
+            });
+        }
+
+        function updateButtonStates() {
+            if (!PLAYLIST_PAIRS || PLAYLIST_PAIRS.length === 0 || !PLAYLIST_PAIRS[currentPlaylistPairIndex]) {
+                console.warn("[FRONTEND] updateButtonStates: PLAYLIST_PAIRS não está pronto ou par de playlist atual inválido, índice:", currentPlaylistPairIndex);
+                [prevVideoButton, nextVideoButton, playPauseButton, prevPlaylistButton, nextPlaylistButton, openYouTubeButton1, openYouTubeButton2].forEach(btn => {
+                    if (btn) btn.disabled = true;
+                });
+                return;
+            }
+            const currentPair = PLAYLIST_PAIRS[currentPlaylistPairIndex];
+            const videos1Exist = currentPair.videos1 && currentPair.videos1.length > 0;
+            const videos2Exist = currentPair.videos2 && currentPair.videos2.length > 0;
+
+            const canGoPrevVideo = currentVideoIndices[0] > 0 || currentVideoIndices[1] > 0;
+            const canGoNextVideo = (videos1Exist && currentVideoIndices[0] < currentPair.videos1.length - 1) ||
+                                   (videos2Exist && currentVideoIndices[1] < currentPair.videos2.length - 1);
+
+            if(prevVideoButton) prevVideoButton.disabled = !canGoPrevVideo || isLoadingPlaylist;
+            if(nextVideoButton) nextVideoButton.disabled = !canGoNextVideo || isLoadingPlaylist;
+            if(playPauseButton) playPauseButton.disabled = isLoadingPlaylist || !playersReady.p1 || !playersReady.p2 || (!videos1Exist && !videos2Exist);
+            if(prevPlaylistButton) prevPlaylistButton.disabled = isLoadingPlaylist || currentPlaylistPairIndex === 0;
+            if(nextPlaylistButton) nextPlaylistButton.disabled = isLoadingPlaylist || currentPlaylistPairIndex >= PLAYLIST_PAIRS.length - 1;
+            
+            if(openYouTubeButton1) openYouTubeButton1.disabled = isLoadingPlaylist || !videos1Exist;
+            if(openYouTubeButton2) openYouTubeButton2.disabled = isLoadingPlaylist || !videos2Exist;
+
+            [prevVideoButton, nextVideoButton, playPauseButton, prevPlaylistButton, nextPlaylistButton, openYouTubeButton1, openYouTubeButton2].forEach(btn => {
+                if (btn) { 
+                    if (btn.disabled) btn.classList.add('disabled-button');
+                    else btn.classList.remove('disabled-button');
+                }
+            });
+        }
 
         async function fetchAppPlaylistConfig() {
             console.log("[FRONTEND] fetchAppPlaylistConfig: Buscando configuração de playlists do backend...");
@@ -194,9 +239,15 @@
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`[FRONTEND] fetchAppPlaylistConfig: Erro ${response.status} ao buscar config:`, errorText);
-                    showMessage(`Erro (${response.status}) ao carregar playlists. Verifique IDs dos canais na Vercel.`, true);
+                    const errorText = await response.text(); 
+                    console.error(`[FRONTEND] fetchAppPlaylistConfig: Erro ${response.status} ao buscar config. Resposta do servidor:`, errorText);
+                    let userMessage = `Erro ${response.status} ao carregar configuração de playlists.`;
+                    if (response.status === 404) {
+                        userMessage += " O endpoint /api/playlists-config não foi encontrado. Verifique se o arquivo 'api/playlists-config.js' existe e foi enviado corretamente para o servidor.";
+                    } else {
+                        userMessage += " Verifique os logs da função na Vercel e as variáveis de ambiente CHANNEL_ID_A e CHANNEL_ID_B.";
+                    }
+                    showMessage(userMessage, true);
                     PLAYLIST_PAIRS = []; 
                     return false;
                 }
@@ -205,7 +256,7 @@
                 if (Array.isArray(config)) { 
                     PLAYLIST_PAIRS = config.map(pair => ({ ...pair, videos1: [], videos2: [] }));
                     if (PLAYLIST_PAIRS.length === 0) {
-                        showMessage("Nenhum par de playlists foi formado. Verifique os canais ou se eles têm playlists.", true);
+                        showMessage("Nenhum par de playlists foi formado. Verifique os IDs dos canais e se eles têm playlists.", true);
                     }
                     console.log("[FRONTEND] fetchAppPlaylistConfig: PLAYLIST_PAIRS atualizado:", JSON.parse(JSON.stringify(PLAYLIST_PAIRS)));
                     return true;
@@ -216,8 +267,8 @@
                     return false;
                 }
             } catch (error) {
-                console.error("[FRONTEND] fetchAppPlaylistConfig: Erro de rede ao buscar config:", error.message, error);
-                showMessage("Erro de rede ao carregar configuração de playlists.", true);
+                console.error("[FRONTEND] fetchAppPlaylistConfig: Erro de rede ou parse ao buscar config:", error.message, error);
+                showMessage("Erro de rede ou formato ao carregar configuração de playlists.", true);
                 PLAYLIST_PAIRS = [];
                 return false;
             }
@@ -278,6 +329,7 @@
                     loadPlaylistPair(currentPlaylistPairIndex, false); 
                  } else {
                     console.error("[FRONTEND] Falha ao carregar config de playlists ou config vazia. Player não iniciará com playlists dinâmicas.");
+                    // A mensagem de erro já é mostrada por fetchAppPlaylistConfig
                  }
                  updateButtonStates(); 
             } else if (playersReady.p1 && playersReady.p2 && PLAYLIST_PAIRS.length > 0) {
